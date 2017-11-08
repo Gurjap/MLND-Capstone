@@ -6,11 +6,11 @@ from IPython.display import HTML
 from keras.models import model_from_json
 
 # Load Keras model
-json_file = open('full_CNN_model.json', 'r')
+json_file = open('~/PycharmProjects/MLND-Capstone/full_CNN_model.json', 'r')
 json_model = json_file.read()
 json_file.close()
 model = model_from_json(json_model)
-model.load_weights('full_CNN_model.h5')
+model.load_weights('~/PycharmProjects/MLND-Capstone/full_CNN_model.h5')
 
 # Class to average lanes with
 class Lanes():
@@ -36,7 +36,7 @@ def road_lines(image):
     # Add lane prediction to list for averaging
     lanes.recent_fit.append(prediction)
     # Only using last five for average
-    if len(lanes.recent_fit) > 5:
+    if len(lanes.recent_fit) > 50:
         lanes.recent_fit = lanes.recent_fit[1:]
 
     # Calculate average detection
@@ -47,11 +47,46 @@ def road_lines(image):
     lane_drawn = np.dstack((blanks, lanes.avg_fit, blanks))
 
     # Re-size to match the original image
+
+    imgray = cv2.cvtColor(lane_drawn,cv2.COLOR_BGR2GRAY)
+
+    ret, thresh = cv2.threshold(imgray.astype(np.uint8), 20, 255, 0)
+    im2, contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+    if len(contours) != 0:
+        # draw in blue the contours that were founded
+        cv2.drawContours(lane_drawn, contours, -1, 255, 3)
+
+        # find the biggest area
+        c = max(contours, key=cv2.contourArea)
+
+        x, y, w, h = cv2.boundingRect(c)
+        # draw the book contour (in green)
+        cv2.rectangle(lane_drawn, (x, y), (x + w, y + h), (0, 255, 0), 2)
     lane_image = imresize(lane_drawn, (720, 1280, 3))
+    #cv2.polylines(lane_image,average_position_left_lower,False,(255,0,0))
+
+    average_position_left_lower = (0, 0)
+    average_position_left_upper =(0, 0)
+    average_position_right_lower =(0, 0)
+    average_position_right_upper =(0, 0)
+   #print("R", lane_image[:, :, 0])
+
+
+           #cv2.imshow("laneImage",lane_image)
+           #print("G",lane_image[x, y, 1])
+           #print("B",lane_image[x, y, 2])
+
+           #print(x,y)
+           #cv2.waitKey(1)
+
+
 
     # Merge the lane drawing onto the original image
+    cv2.imshow("laneImage",lane_image)
     result = cv2.addWeighted(image, 1, lane_image, 1, 0)
-
+    cv2.imshow("Live",result)
+    cv2.waitKey(1)
     return result
 
 lanes = Lanes()
@@ -60,7 +95,7 @@ lanes = Lanes()
 vid_output = 'proj_reg_vid.mp4'
 
 # Location of the input video
-clip1 = VideoFileClip("project_video.mp4")
+clip1 = VideoFileClip("~/Videos/103_PANA/P1030079.MP4")
 
 vid_clip = clip1.fl_image(road_lines)
 vid_clip.write_videofile(vid_output, audio=False)
